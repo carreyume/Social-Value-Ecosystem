@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Social Value Webinar Interactive Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
+    <!-- Chosen Palette: Calm Harmony -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght00;500;600;700;800&display=swap');
+
+        /* Custom styles for node labels (Used for the Network Diagram) */
+        .node-label {
+            position: absolute;
+            padding: 8px 12px;
+            border-radius: 0.5rem; /* rounded-lg */
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.06);
+            font-weight: 500;
+            white-space: nowrap;
+            text-align: center;
+            border: 1px solid;
+            transition: all 0.2s ease-in-out;
+            cursor: default;
+            background-color: white;
+            z-index: 10;
+        }
+
+        .chart-container {
+            position: relative; 
+            width: 100%; 
+            padding-top: 100%; /* Maintain 1:1 aspect ratio */
+            max-width: 600px;
+            margin: auto;
+        }
+
+        /* Ensure SVG covers the container */
+        .venn-svg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        
+        /* New styles for SVG text elements */
+        .pillar-node-text {
+            font-size: 4px; 
+            font-weight: 800;
+            fill: #ffffff;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+        }
+        .node-icon {
+            font-size: 6px;
+            fill: #ffffff;
+            font-weight: 900;
+        }
+        .center-node-text {
+             font-size: 3px; /* Reduced to fit three words (SOCIAL VALUE OUTCOMES) */
+             font-weight: extrabold;
+             fill: #ffffff;
+        }
+
+        .sub-topic-text {
+            font-size: 2px;
+            font-weight: 600;
+            fill: #1f2937;
+            opacity: 0.8;
+            pointer-events: none; 
+        }
+        
+        /* CSS class to hide the sub-topic groups by default */
+        .sub-topic-hidden {
+            display: none;
+        }
+
+        /* Style for interactive circles/groups */
+        .pillar-group {
+            cursor: pointer;
+            transition: transform 0.5s ease-in-out;
+        }
+        .pillar-group:hover .pillar-circle {
+            transform: scale(1.05);
+            transition: transform 0.1s ease-out;
+        }
+        .connections-group {
+             transition: opacity 0.3s;
+        }
+
+        /* Sidebar specific styles */
+        #consultation-sidebar {
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: 100%;
+            max-width: 400px;
+            height: 100%;
+            background-color: #f9fafb; /* Light background */
+            box-shadow: -8px 0 16px rgba(0, 0, 0, 0.2);
+            transform: translateX(100%);
+            transition: transform 0.3s ease-in-out;
+            z-index: 100;
+            overflow-y: auto;
+            padding-bottom: 50px; /* Space for the CTA at the bottom */
+        }
+        #consultation-sidebar.open {
+            transform: translateX(0);
+        }
+        .flowchart-step {
+            border-left: 4px solid #4f46e5;
+        }
+        
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+
+    <div class="container mx-auto p-4 md:p-8 max-w-7xl">
+
+        <header class="text-center mb-12 bg-white p-6 rounded-xl shadow-lg border-b-4 border-indigo-500">
+            <h1 class="text-3xl md:text-5xl font-extrabold text-gray-900 mb-4">Social Value Ecosystem: Implementation Framework</h1>
+            <div class="flex flex-col sm:flex-row justify-center space-y-2 sm:space-y-0 sm:space-x-8 text-base md:text-lg font-medium text-gray-700">
+                <span class="font-semibold text-indigo-600">Assurance</span>
+                <span class="font-semibold text-green-600">Financing</span>
+                <span class="font-semibold text-amber-600">Policy</span>
+            </div>
+        </header>
+
+        <main>
+            <section id="organization-map" class="mb-12 bg-white p-8 rounded-xl shadow-sm border border-gray-200">
+                <h2 class="text-2xl font-bold text-gray-900 mb-4 text-center">Stakeholder Map: Topics and Implementation Partners</h2>
+                <p class="text-center text-gray-600 max-w-4xl mx-auto mb-6">
+                    The implementation of Social Value relies on a broad network. Explore this interactive map to see which organizations focus on Assurance, Financing, and Policy, moving beyond the core webinar partners to show the wider ecosystem.
+                </p>
+                <div id="sunburstChart" class="chart-container" style="padding-top: 0; height: 500px; max-height: 500px;">
+                    <!-- Plotly Sunburst remains here for the organizational mapping -->
+                </div>
+            </section>
+            
+            <section id="dashboard" class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                
+                <!-- Left Column (Text Explanation) -->
+                <div class="lg:col-span-1 space-y-8 h-fit">
+                    <div class="bg-indigo-50 p-6 rounded-xl min-h-[150px] border border-indigo-200">
+                        <h3 class="font-bold text-xl text-indigo-700 mb-3">Interdependence of Functions</h3>
+                        <p class="text-gray-700">
+                            Achieving complex **Social Value Outcomes** requires collaboration across all three functions. No single pillar can solve global challenges alone.
+                        </p>
+                        <ul class="list-disc list-inside mt-4 space-y-2 text-sm text-gray-700">
+                            <li><strong>Nodes:</strong> The primary functions (Pillars) and the ultimate goal (Outcomes).</li>
+                            <li><strong>Links:</strong> Show the mandatory connections and flows required for successful value delivery.</li>
+                            <li><strong>Sub-topics:</strong> Click on a pillar (circle) to see its components. Click again to reset the view.</li>
+                        </ul>
+                    </div>
+
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                        <h3 class="text-xl font-bold text-gray-900 mb-3">Key Takeaway</h3>
+                        <p class="text-sm text-gray-700">
+                            Collaboration is the delivery mechanism. Financing brings capital, Policy brings legitimacy and scale, and Assurance ensures impact is real, not just promised.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Right Column (Network Diagram) -->
+                <div class="lg:col-span-2 bg-white p-6 rounded-xl shadow-lg border border-gray-200 relative">
+                    <h2 class="text-2xl font-bold text-gray-900 mb-4 text-center">Implementation Network: Outcomes as the Center</h2>
+
+                    <div class="chart-container" id="venn-container" style="padding-top: 100%;">
+                        
+                        <svg class="venn-svg" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet">
+                            
+                            <defs>
+                                <!-- Arrowhead Marker Definition -->
+                                <marker id="arrowhead" markerWidth="5" markerHeight="5" refX="2" refY="2" orient="auto" markerUnits="strokeWidth">
+                                    <path d="M0,0 L2,2 L0,4 L4,2 Z" fill="#374151" />
+                                </marker>
+                            </defs>
+
+                            <!-- 1 & 2. Connections -->
+                            <g id="connections" class="connections-group">
+                                <!-- A to P (Assurance -> Policy) - Closure of the loop (Indigo) -->
+                                <path d="M 23 45 A 35 35 0 0 1 45 78" 
+                                      fill="none" stroke="#4f46e5" stroke-width="0.8" marker-end="url(#arrowhead)"/>
+                                <!-- P to F (Policy -> Financing) - Start of the loop (Amber) -->
+                                <path d="M 55 78 A 35 35 0 0 1 77 45" 
+                                      fill="none" stroke="#f59e0b" stroke-width="0.8" marker-end="url(#arrowhead)"/>
+                                <!-- F to A (Financing -> Assurance) - Middle segment of the loop (Green) -->
+                                <line x1="65" y1="30" x2="35" y2="30" stroke="#10b981" stroke-width="0.8" marker-end="url(#arrowhead)"/>
+                                
+                                <!-- Center connections (Pillars to Outcomes) -->
+                                <!-- A to C (Indigo) -->
+                                <line x1="28" y1="38" x2="42" y2="47" stroke="#4f46e5" stroke-width="0.5" stroke-dasharray="0.5" />
+                                <!-- F to C (Green) -->
+                                <line x1="72" y1="38" x2="58" y2="47" stroke="#10b981" stroke-width="0.5" stroke-dasharray="0.5" />
+                                <!-- P to C (Amber) -->
+                                <line x1="50" y1="75" x2="50" y2="60" stroke="#f59e0b" stroke-width="0.5" stroke-dasharray="0.5" />
+                            </g>
+                            
+                            <!-- 4. Central Node: Social Value Outcomes (Dark Gray) -->
+                            <g id="center-node-group">
+                                <circle cx="50" cy="50" r="10" fill="#1f2937"/>
+                                <text x="50" y="46" text-anchor="middle" class="center-node-text" style="pointer-events: none;">
+                                    SOCIAL
+                                </text>
+                                <text x="50" y="50" text-anchor="middle" class="center-node-text" style="pointer-events: none;">
+                                    VALUE
+                                </text>
+                                 <text x="50" y="54" text-anchor="middle" class="center-node-text" style="pointer-events: none;">
+                                    OUTCOMES
+                                </text>
+                            </g>
+
+                            <!-- 3. Main Pillars (Now wrapped in groups for easy manipulation) -->
+                            
+                            <!-- Group A: Assurance (Indigo) -->
+                            <g id="group-assurance" class="pillar-group" onclick="handlePillarClick('assurance')">
+                                <circle cx="20" cy="30" r="15" fill="#4f46e5" class="pillar-circle"/>
+                                <text x="20" y="25" text-anchor="middle" class="node-icon" style="pointer-events: none;">&#x2714;</text>
+                                <text x="20" y="32.5" text-anchor="middle" class="pillar-node-text" style="pointer-events: none;">ASSURANCE</text>
+                            </g>
+
+                            <!-- Group F: Financing (Green) -->
+                            <g id="group-financing" class="pillar-group" onclick="handlePillarClick('financing')">
+                                <circle cx="80" cy="30" r="15" fill="#10b981" class="pillar-circle"/>
+                                <text x="80" y="25" text-anchor="middle" class="node-icon" style="pointer-events: none;">$</text>
+                                <text x="80" y="32.5" text-anchor="middle" class="pillar-node-text" style="pointer-events: none;">FINANCING</text>
+                            </g>
+
+                            <!-- Group P: Policy (Amber) -->
+                            <g id="group-policy" class="pillar-group" onclick="handlePillarClick('policy')">
+                                <circle cx="50" cy="85" r="15" fill="#f59e0b" class="pillar-circle"/>
+                                <text x="50" y="80" text-anchor="middle" class="node-icon" style="pointer-events: none;">&#9999;</text>
+                                <text x="50" y="87.5" text-anchor="middle" class="pillar-node-text" style="pointer-events: none;">POLICY</text>
+                            </g>
+
+                            <!-- 5. Sub-Topics (Groups repositioned to be centered when active) -->
+                            
+                            <!-- Assurance Sub-topics -->
+                            <g id="assurance-topics" class="sub-topic-hidden">
+                                <!-- SIA, MSPO/RSPO (Top-Left) -->
+                                <text x="35" y="30" text-anchor="end" class="sub-topic-text">SIA</text> 
+                                <text x="35" y="35" text-anchor="end" class="sub-topic-text">MSPO/RSPO</text>
+
+                                <!-- GRI, ESG Reporting (Top-Right) -->
+                                <text x="65" y="30" text-anchor="start" class="sub-topic-text">GRI</text>
+                                <text x="65" y="35" text-anchor="start" class="sub-topic-text">ESG Reporting</text> 
+                                
+                                <!-- SROI (Bottom-Left) -->
+                                <text x="30" y="70" text-anchor="middle" class="sub-topic-text">SROI</text> 
+                            </g>
+
+                            <!-- Financing Sub-topics -->
+                            <g id="financing-topics" class="sub-topic-hidden">
+                                <!-- Grants, Impact Investing (Top-Right) -->
+                                <text x="65" y="30" text-anchor="start" class="sub-topic-text">Grants</text>
+                                <text x="65" y="35" text-anchor="start" class="sub-topic-text">Impact Investing</text> 
+
+                                <!-- Fund Structuring, Blended Finance (Top-Left) -->
+                                <text x="35" y="30" text-anchor="end" class="sub-topic-text">Fund Structuring</text> 
+                                <text x="35" y="35" text-anchor="end" class="sub-topic-text">Blended Finance</text> 
+                                
+                                <!-- CAPITAL Mobilization, Lending (Bottom) -->
+                                <text x="50" y="70" text-anchor="middle" class="sub-topic-text">CAPITAL Mobilization</text> 
+                                <text x="50" y="75" text-anchor="middle" class="sub-topic-text">Lending</text> 
+                            </g>
+                            
+                            <!-- Policy Sub-topics -->
+                            <g id="policy-topics" class="sub-topic-hidden">
+                                <!-- Regulation, Legislation (Left) -->
+                                <text x="30" y="40" text-anchor="end" class="sub-topic-text">Regulation</text> 
+                                <text x="30" y="45" text-anchor="end" class="sub-topic-text">Legislation</text> 
+                                
+                                <!-- Public Procurement, Standards (Right) -->
+                                <text x="70" y="40" text-anchor="start" class="sub-topic-text">Public Procurement</text> 
+                                <text x="70" y="45" text-anchor="start" class="sub-topic-text">Standards</text>
+                                
+                                <!-- Governance & Accountability (Bottom) -->
+                                <text x="50" y="75" text-anchor="middle" class="sub-topic-text">GOVERNANCE & Accountability</text>
+                            </g>
+                            
+                        </svg>
+
+                        <!-- CTA Button is now a button that calls a JS function -->
+                        <button onclick="toggleSidebar()" class="absolute bottom-[2%] left-1/2 -translate-x-1/2 px-4 py-2 bg-white border-2 border-indigo-500 text-indigo-700 font-bold text-sm rounded-lg shadow-lg hover:bg-indigo-50 hover:shadow-xl transition-all duration-200" title="Opens the SIA Consultation Process Flowchart">
+                            View SIA Consultation Process
+                        </button>
+
+                        <!-- Outcome Details (HTML for better styling) - Positioned at top: 15% -->
+                        <div class="node-label" style="top: 15%; left: 50%; transform: translate(-50%, -50%); border-color: #374151; color: #1f2937; padding: 10px 15px;">
+                            <span class="text-base font-extrabold text-indigo-700">🎯 Core Deliverables</span>
+                            <hr class="my-1 border-gray-200">
+                            <span class="text-sm">Decent Wage</span>
+                            <br>
+                            <span class="text-sm">Livelihood Security</span>
+                            <br>
+                            <span class="text-sm">Public Health</span>
+                        </div>
+                        
+                    </div>
+                </div>
+            </section>
+        </main>
+        
+        <footer class="text-center mt-16 pt-8 border-t border-gray-200">
+            <p class="text-gray-500">Interactive Social Value Framework | 2025</p>
+        </footer>
+
+    </div>
+
+    <!-- NEW: SIA Consultation Flowchart Sidebar -->
+    <div id="consultation-sidebar" class="p-8">
+        <div class="flex justify-between items-center mb-6 border-b pb-4">
+            <h3 class="text-2xl font-extrabold text-indigo-700">SIA Consultation Flowchart</h3>
+            <button onclick="toggleSidebar()" class="text-gray-600 hover:text-gray-900 text-2xl font-bold">
+                &times;
+            </button>
+        </div>
+        <p class="text-gray-600 mb-6 text-sm">A clear roadmap for executing a Social Impact Assessment (SIA) and achieving verified outcomes.</p>
+
+        <!-- Flowchart Steps -->
+        <div class="space-y-6">
+            <div class="flowchart-step pl-4 pb-4">
+                <p class="text-xs font-semibold uppercase text-indigo-600 mb-1">Phase 1 (Policy)</p>
+                <h4 class="font-bold text-lg text-gray-900">Foundation & Scoping</h4>
+                <p class="text-sm text-gray-700">Define the project scope and boundaries. Ensure alignment with existing governance and policy mandates.</p>
+                <p class="text-xs mt-2 text-indigo-500">Milestone: Scoping Document Approval</p>
+            </div>
+
+            <div class="flowchart-step pl-4 pb-4 border-indigo-500">
+                <p class="text-xs font-semibold uppercase text-green-600 mb-1">Phase 2 (Assurance)</p>
+                <h4 class="font-bold text-lg text-gray-900">Data Collection & Baseline</h4>
+                <p class="text-sm text-gray-700">Gather primary and secondary data. Engage stakeholders to establish the project's 'but-for' case and initial metrics.</p>
+                <p class="text-xs mt-2 text-green-500">Milestone: Data Validation Sign-off</p>
+            </div>
+
+            <div class="flowchart-step pl-4 pb-4 border-green-500">
+                <p class="text-xs font-semibold uppercase text-amber-600 mb-1">Phase 3 (Financing)</p>
+                <h4 class="font-bold text-lg text-gray-900">Impact Analysis & Valuation</h4>
+                <p class="text-sm text-gray-700">Apply SROI and other methodologies to quantify and assign a social value to the identified changes and outcomes.</p>
+                <p class="text-xs mt-2 text-amber-500">Milestone: Calculated Impact Summary Review</p>
+            </div>
+
+            <div class="flowchart-step pl-4 pb-4 border-amber-500">
+                <p class="text-xs font-semibold uppercase text-indigo-600 mb-1">Phase 4 (Assurance)</p>
+                <h4 class="font-bold text-lg text-gray-900">Final Reporting & Verification</h4>
+                <p class="text-sm text-gray-700">Finalize the report and compile evidence for external assurance (e.g., SVI verification) before publication.</p>
+                <p class="text-xs mt-2 text-indigo-500">Milestone: Independent Assurance Statement</p>
+            </div>
+
+            <div class="flowchart-step pl-4 pb-4 border-indigo-500">
+                <p class="text-xs font-semibold uppercase text-green-600 mb-1">Phase 5 (Policy/Financing)</p>
+                <h4 class="font-bold text-lg text-gray-900">Strategy Integration & M&E</h4>
+                <p class="text-sm text-gray-700">Integrate verified findings into policy, procurement, and future investment decisions. Develop long-term monitoring.</p>
+                <p class="text-xs mt-2 text-green-500">Milestone: Implementation Roadmap Finalized</p>
+            </div>
+        </div>
+
+        <div class="mt-8 pt-4 border-t border-gray-300 text-center">
+             <button onclick="toggleSidebar()" class="px-6 py-3 bg-indigo-600 text-white font-bold rounded-xl shadow-md hover:bg-indigo-700 transition-colors">
+                Close Flowchart
+            </button>
+        </div>
+    </div>
+    <!-- END Sidebar -->
+
+    <script>
+        // Sunburst Data (kept for the Stakeholder Map)
+        const sunburstData = {
+            ids: [
+                "Ecosystem", 
+                "Assurance", "Assurance-G", "Assurance-R", 
+                "Assurance-S&P", "Assurance-CDP", "Assurance-GRI", 
+                "Assurance-Peterson", "Assurance-SVI", "Assurance-B Lab", 
+                "Financing", "Financing-G", "Financing-R", 
+                "Financing-GIIN", "Financing-Rockefeller", "Financing-WB", "Financing-GIZ", 
+                "Financing-IDB", "Financing-AVPN", "Financing-Sovereign", 
+                "Policy", "Policy-G", "Policy-R", 
+                "Policy-UNGC", "Policy-OECD", "Policy-G20", 
+                "Policy-ILO", "Policy-UNDP", "Policy-WHO", "Policy-ASEAN" 
+            ],
+            labels: [
+                "Social Value<br>Ecosystem", 
+                "Assurance", "Global", "Regional/Country", 
+                "S&P Global", "CDP", "GRI", 
+                "Peterson Solutions", "Social Value Intl (SVI)", "B Lab (B Corps)", 
+                "Financing", "Global", "Regional/Country", 
+                "GIIN", "Rockefeller Fdn", "World Bank", "GIZ", 
+                "IDB", "AVPN", "Sovereign Fund", 
+                "Policy", "Global", "Regional/Country", 
+                "UN Global Compact", "OECD", "G20", 
+                "ILO", "UNDP", "WHO", "ASEAN" 
+            ],
+            parents: [
+                "", 
+                "Ecosystem", "Assurance", "Assurance", 
+                "Assurance-G", "Assurance-G", "Assurance-G", 
+                "Assurance-R", "Assurance-R", "Assurance-R", 
+                "Ecosystem", "Financing", "Financing", 
+                "Financing-G", "Financing-G", "Financing-G", "Financing-G", 
+                "Financing-R", "Financing-R", "Financing-R", 
+                "Ecosystem", "Policy", "Policy", 
+                "Policy-G", "Policy-G", "Policy-G", 
+                "Policy-R", "Policy-R", "Policy-R", "Policy-R" 
+            ],
+            marker: {
+                colors: [
+                    '#1f2937', 
+                    '#4f46e5', '#6366f1', '#a5b4fc', 
+                    '#c7d2fe', '#e0e7ff', '#f1f5fd', 
+                    '#818cf8', '#b5c5f8', '#d9e0fc', 
+                    '#10b981', '#34d399', '#6ee7b7', 
+                    '#a7f3d0', '#d1fae5', '#f0fdf4', '#e0f8f8', 
+                    '#4ed1d1', '#74e09f', '#a9f7c7', 
+                    '#f59e0b', '#fbbf24', '#fcd34d', 
+                    '#fde68a', '#fef3c7', '#fffbeb', 
+                    '#faac47', '#fcd57e', '#fde6a7', '#fff7e0' 
+                ]
+            }
+        };
+
+        function renderSunburst() {
+            const data = [{
+                type: "sunburst",
+                ids: sunburstData.ids,
+                labels: sunburstData.labels,
+                parents: sunburstData.parents,
+                textfont: { color: 'black' },
+                outsidetextfont: {size: 14, color: "#374151"}, 
+                leaf: {opacity: 0.8},
+                marker: sunburstData.marker,
+                branchvalues: 'total', 
+                root: {
+                    textfont: {
+                        color: 'white',
+                        size: 18,
+                        weight: 'bold' 
+                    }
+                },
+                textinfo: "label" 
+            }];
+
+            const layout = {
+                margin: {l: 0, r: 0, b: 0, t: 0},
+                sunburstcolorway: ["#4f46e5", "#10b981", "#f59e0b"],
+                responsive: true,
+                paper_bgcolor: '#ffffff'
+            };
+
+            Plotly.newPlot('sunburstChart', data, layout, {
+                displayModeBar: false, 
+                staticPlot: false, 
+                responsive: true
+            });
+        }
+        
+        // --- Interactive Network Logic ---
+
+        let currentActivePillar = null;
+        const allPillars = ['assurance', 'financing', 'policy'];
+        const scaleFactor = 1.5; // Scale factor for the clicked pillar
+
+        // Center coordinates of the original pillars (SVG coordinates 0-100)
+        const pillarCenter = {
+            'assurance': { x: 20, y: 30 },
+            'financing': { x: 80, y: 30 },
+            'policy': { x: 50, y: 85 }
+        };
+        const svgCenter = { x: 50, y: 50 };
+
+        function handlePillarClick(clickedPillarId) {
+            const isAlreadyActive = clickedPillarId === currentActivePillar;
+            
+            // 1. Reset everything first
+            resetNetworkView();
+
+            if (isAlreadyActive) {
+                currentActivePillar = null;
+                return; // Clicked the active pillar, just reset and exit
+            }
+
+            currentActivePillar = clickedPillarId;
+
+            // 2. Hide connections (all lines/paths)
+            document.getElementById('connections').style.display = 'none';
+
+            const clickedCenter = pillarCenter[clickedPillarId];
+            const translateX = svgCenter.x - clickedCenter.x;
+            const translateY = svgCenter.y - clickedCenter.y;
+
+            allPillars.forEach(pillarId => {
+                const group = document.getElementById(`group-${pillarId}`);
+                const topics = document.getElementById(`${pillarId}-topics`);
+                
+                if (pillarId === clickedPillarId) {
+                    // 3. Enlarge and position the clicked pillar to the center
+                    group.setAttribute('transform', `translate(${translateX}, ${translateY}) scale(${scaleFactor})`);
+                    
+                    // 4. Show the topics (word cloud) for the active pillar
+                    if (topics) {
+                        topics.classList.remove('sub-topic-hidden');
+                    }
+
+                } else {
+                    // 5. Hide other pillars
+                    group.style.display = 'none';
+                    if (topics) {
+                        topics.classList.add('sub-topic-hidden');
+                    }
+                }
+            });
+            
+            // Dim the central node and deliverables tooltip when a pillar is focused
+            document.getElementById('center-node-group').style.opacity = 0.1;
+            document.querySelector('.node-label').style.opacity = 0.1;
+        }
+
+        function resetNetworkView() {
+            // Show connections
+            document.getElementById('connections').style.display = '';
+
+            // Reset center node/deliverables opacity
+            document.getElementById('center-node-group').style.opacity = 1;
+            document.querySelector('.node-label').style.opacity = 1;
+
+            // Reset all pillars
+            allPillars.forEach(pillarId => {
+                const group = document.getElementById(`group-${pillarId}`);
+                const topics = document.getElementById(`${pillarId}-topics`);
+                
+                group.style.display = '';
+                group.setAttribute('transform', ''); // Remove scale and translation
+                
+                // Hide all topics
+                if (topics) {
+                    topics.classList.add('sub-topic-hidden');
+                }
+            });
+        }
+        
+        function toggleSidebar() {
+            const sidebar = document.getElementById('consultation-sidebar');
+            sidebar.classList.toggle('open');
+            // Toggle body overflow to prevent background scrolling when sidebar is open
+            document.body.style.overflow = sidebar.classList.contains('open') ? 'hidden' : 'auto';
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            // Render the organizational map (Sunburst)
+            renderSunburst();
+        });
+    </script>
+
+</body>
+</html>
